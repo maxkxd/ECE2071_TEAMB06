@@ -64,25 +64,15 @@ def init_port(port):
 port = find_port()
 ser = init_port(port)
 print(ser)
-SAMPLE_RATE = 10000
+SAMPLE_RATE = 5000
 samples = []
 counter = 0
 
+#samples = list(ser.read(5000))
+while(counter < 5):
+    samples.append(list(ser.read(5000)))
+    counter += 1
 
-start = time.time()
-point = ser.read(50000)
-# for _ in range(10*SAMPLE_RATE):
-#     counter += 1
-#     print(counter)
-#     point = ser.read(1)
-#     if point:
-#         samples.append(point[0])
-#     else:
-#         print("corrupted")
-        #time.sleep(0.1)
-
-elapsed = time.time() - start
-print(elapsed)
 data = np.array(samples)
 
 data = (data-data.min())/(data.max() - data.min())
@@ -98,6 +88,6 @@ with wave.open('output.wav', 'wb') as wf:
     wf.setnchannels(1)
     wf.setsampwidth(1)
     wf.setframerate(SAMPLE_RATE)
-    wf.writeframes(data.tobytes())
+    wf.writeframes(data)
 
 print("write complete")
