@@ -70,16 +70,16 @@ counter = 0
 
 
 start = time.time()
-
-for _ in range(10*SAMPLE_RATE):
-    #counter += 1
-    #print(counter)
-    point = ser.read(1)
-    if point:
-        samples.append(point[0])
-    else:
-        print("corrupted")
-        time.sleep(0.1)
+point = ser.read(50000)
+# for _ in range(10*SAMPLE_RATE):
+#     counter += 1
+#     print(counter)
+#     point = ser.read(1)
+#     if point:
+#         samples.append(point[0])
+#     else:
+#         print("corrupted")
+        #time.sleep(0.1)
 
 elapsed = time.time() - start
 print(elapsed)
