@@ -64,30 +64,32 @@ def init_port(port):
 port = find_port()
 ser = init_port(port)
 print(ser)
-SAMPLE_RATE = 5000
-samples = []
-counter = 0
 
-#samples = list(ser.read(5000))
-while(counter < 5):
-    samples.append(list(ser.read(5000)))
-    counter += 1
+def main():
+    samples = []
+    counter = 0
+    #samples = list(ser.read(5000))
+    start = time.time()
+    try:
+        while(1):
+            samples.append(list(ser.read(1)))
+    except KeyboardInterrupt:
+        elapsed = time.time() - start
+        data = np.array(samples)
+        data = data.reshape(-1)
 
-data = np.array(samples)
+        data = (data)/(data.max())
+        data = data*255
+        data = data.astype(np.uint8)
+        sampleRate = int(len(data)/elapsed)
+        with wave.open('output.wav', 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(1)
+            wf.setframerate(sampleRate)
+            wf.writeframes(data.tobytes())
 
-data = (data-data.min())/(data.max() - data.min())
-data = data*255
-data = data.astype(np.uint8)
+        print(len(data))
+        print("write complete")
 
-print(len(data))
 
-#for point in data:
-#    print(point)
-
-with wave.open('output.wav', 'wb') as wf:
-    wf.setnchannels(1)
-    wf.setsampwidth(1)
-    wf.setframerate(SAMPLE_RATE)
-    wf.writeframes(data)
-
-print("write complete")
+main()
