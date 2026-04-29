@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +42,8 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim16;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -53,12 +55,35 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+//typedef enum {
+//	TRIGGER,
+//	ECHODURATION,
+//	ECHO
+//} UltrasonicMode;
+volatile static bool echoDuration = false; // change label
+volatile static bool echoReceived = false;
+volatile static uint32_t echoTime = 1000;
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin) == GPIO_PIN_SET)
+	{
+		__HAL_TIM_SET_COUNTER(&htim16, 0);
+	}
+	else
+	{
+		echoReceived = true;
+		echoTime = __HAL_TIM_GET_COUNTER(&htim16);
+		__HAL_TIM_SET_COUNTER(&htim16, 0);
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -93,38 +118,68 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_SPI1_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */\
-  int size = 50000;
+  /* USER CODE BEGIN WHILE */
+  // init for SPI data and UART transmission
   uint8_t buf [1];
-  uint8_t data[size];
-  uint8_t smoothed_data[size/2];
-  int firstPoint = 1;
+  uint8_t dataBuf[2];
+  uint8_t mean[1];
+  dataBuf[0] = 0;
+  dataBuf[1] = 0;
+
+  // init for us sensor
+  HAL_TIM_Base_Start(&htim16);
+  bool trigger = false;
+  uint32_t distance = 1000;
+  uint32_t usTimeout = 6e4;
+
   while (1)
   {
-	  for (int j = 0; j < size; j++) {
-		  HAL_SPI_Receive(&hspi1, buf, 1, 1000);
-		  data [j] = buf[0];
-		  if (!firstPoint) {
-			  smoothed_data[j] = (smoothed_data[j - 1] + data[j])/2;
-		  }
-		  if (firstPoint) {
-			smoothed_data[0] = data[0];
-			firstPoint = 0;
-		  }
+//	  HAL_SPI_Receive(&hspi1, buf, 1, 0.02);
+//	  dataBuf[0] = dataBuf[1];
+//	  dataBuf[1] = buf[0];
+//	  mean[0] = (dataBuf[0] + dataBuf[1])/2;
+//	  if (distance <= 10)
+//	  {
+//		  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
+//	  }
+
+	  // sending out request for measurement
+	  if (!trigger && (__HAL_TIM_GET_COUNTER(&htim16) >= usTimeout) && !echoDuration)
+	  {
+		  trigger = true;
+		  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, 1);
+		  __HAL_TIM_SET_COUNTER(&htim16, 0);
 	  }
-    HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1);
-	  HAL_Delay(5000);
-	  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
-	  firstPoint = 1;
-	  HAL_UART_Transmit(&huart2, smoothed_data, size, HAL_MAX_DELAY);
-	  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1);
-	  HAL_Delay(1000);
-	  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
+
+	  // after 10ms stop request
+	  if(trigger && __HAL_TIM_GET_COUNTER(&htim16) >= 10) {
+		  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, 0);
+		  echoDuration = true;  // set to echoDuration
+		  trigger = false;
+	  }
+
+	  // low edge isr triggered, find distance and reset
+	  if (echoReceived)
+	  {
+		  echoReceived = false;
+		  echoDuration = false;
+		  distance = echoTime/58.309;
+	  }
+	  if(distance<10)
+	  {
+		  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1);
+	  }
+	  else
+	  {
+		  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
+	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -232,6 +287,38 @@ static void MX_SPI1_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 31;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 65535;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -284,7 +371,23 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : TRIGGER_Pin */
+  GPIO_InitStruct.Pin = TRIGGER_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(TRIGGER_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : ECHO_Pin */
+  GPIO_InitStruct.Pin = ECHO_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(ECHO_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD3_Pin */
   GPIO_InitStruct.Pin = LD3_Pin;
@@ -292,6 +395,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD3_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
