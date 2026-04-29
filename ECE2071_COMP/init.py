@@ -36,8 +36,8 @@ def init_port(port):
     try:
         ser = serial.Serial(
             port,
-            115200
-            #dsrdtr=False # claude
+            115200,
+            timeout=1
         )
         print("Port connected...")
         #time.sleep(3)

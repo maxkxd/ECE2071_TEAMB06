@@ -9,6 +9,7 @@ import CLI as CLI
 import processing as proc
 
 if __name__ == "__main__":
+    
     try:
         # initialising stm
         port = init.find_port()
@@ -19,7 +20,7 @@ if __name__ == "__main__":
         #recordTime = CLI.fetch_record_time()
 
         # collect input data
-        elapsedTime, data = proc.collect_data(ser, 10)
+        elapsedTime, data = proc.collect_data_us(ser)
         data = proc.normalise_data(data)
 
         # writing to .wav for now

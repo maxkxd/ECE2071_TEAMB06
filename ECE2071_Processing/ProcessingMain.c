@@ -70,7 +70,9 @@ static void MX_TIM16_Init(void);
 volatile static bool echoDuration = false; // change label
 volatile static bool echoReceived = false;
 volatile static uint32_t echoTime = 1000;
-
+//volatile static uint32_t echoTime = 0;
+//volatile static uint32_t distance = 100;
+//volatile static bool trigger = false; // change label
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if(HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin) == GPIO_PIN_SET)
@@ -138,16 +140,38 @@ int main(void)
   uint32_t distance = 1000;
   uint32_t usTimeout = 6e4;
 
+  // max no detection time
+  uint8_t objCtrMax = 10;
+  uint8_t objCtr = 0;
+
   while (1)
   {
 //	  HAL_SPI_Receive(&hspi1, buf, 1, 0.02);
 //	  dataBuf[0] = dataBuf[1];
 //	  dataBuf[1] = buf[0];
 //	  mean[0] = (dataBuf[0] + dataBuf[1])/2;
-//	  if (distance <= 10)
-//	  {
-//		  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
-//	  }
+//	  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
+
+	  if(HAL_SPI_Receive(&hspi1, buf, 1, 10) == HAL_OK)
+	  {
+		  dataBuf[0] = dataBuf[1];
+		  dataBuf[1] = buf[0];
+		  mean[0] = (dataBuf[0] + dataBuf[1])/2;
+
+		  if (distance <= 10 && objCtr < objCtrMax)
+		  {
+			  //HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+			  HAL_UART_Transmit(&huart2, &mean[0], 1, 10);
+		  }
+		  if (distance <= 10 && objCtr > objCtrMax)
+		  {
+			  objCtr = 0;
+		  }
+		  else
+		  {
+			  objCtr++;
+		  }
+	  }
 
 	  // sending out request for measurement
 	  if (!trigger && (__HAL_TIM_GET_COUNTER(&htim16) >= usTimeout) && !echoDuration)
@@ -170,14 +194,6 @@ int main(void)
 		  echoReceived = false;
 		  echoDuration = false;
 		  distance = echoTime/58.309;
-	  }
-	  if(distance<10)
-	  {
-		  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1);
-	  }
-	  else
-	  {
-		  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
 	  }
 
     /* USER CODE END WHILE */
