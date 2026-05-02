@@ -67,6 +67,35 @@ def main():
             print("exiting")
             ser.close()
 
+        elif mode == 3:
+
+            help = CLI.help_window()
+
+            #help loop
+            while True:
+                #help standard mode
+                if help == 0:
+                    help = CLI.help_standard
+                    if help == 0:
+                        continue
+                    elif help == 1:
+                        break
+                #help US triggered mode
+                elif help == 1:
+                    help = CLI.help_US
+                    if help == 0:
+                        continue
+                    elif help == 1:
+                        break
+                #return to mode select
+                elif help == 2:
+                    break
+                
+            #return to mode select
+            continue
+
+
+
 if __name__ == "__main__":
     main()
     sys.exit()
