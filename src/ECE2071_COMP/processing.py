@@ -7,20 +7,22 @@ import wave
 # split file up in the future gng >:)
 
 def collect_data(ser, recordTime):
+    time.sleep(1)
     start = time.time()
     elapsed = 0
     samples = []
 
     # collecting data
     while elapsed < recordTime:
-        sample = list(ser.read(1))
+        sample = ser.read(1)
         if sample:
-            samples.append(sample)
+            samples.append(sample[0])
         elapsed = time.time() - start
     
     # reshaping to 1xN array
     data = np.array(samples)
-    data = data.reshape(-1)
+
+    print(data.shape)
     
     return elapsed, data
 
@@ -55,7 +57,7 @@ def collect_data_us(ser):
         return elapsed, data
 
 def normalise_data(data):
-    data = (data)/(data.max())
+    data = (data-data.min())/(data.max()-data.min())
     data = data*255
     data = data.astype(np.uint8)
 

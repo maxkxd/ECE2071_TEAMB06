@@ -1,9 +1,5 @@
 import numpy as np
-# import wave
-# import serial
-# import serial.tools.list_ports
 import sys
-# import time
 import utils as utils
 import CLI as CLI
 import processing as proc
@@ -17,10 +13,6 @@ def main():
     #initialising states
     exitProgram = False
     idle = 0
-
-    # initialising necessary recording variables
-    data = np.array([])
-    sampleRate = 0
 
     # start main loop
     while not exitProgram:

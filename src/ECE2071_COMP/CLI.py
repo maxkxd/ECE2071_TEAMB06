@@ -16,7 +16,7 @@ def fetch_output():
     return output
 
 def fetch_mode():
-    msg = "How would you like to record?\n0: Standard\n1: US triggered\n2: Exit\n>"
+    msg = "How would you like to record?\n0: Standard\n1: US triggered\n2: Exit\n> "
 
     mode = utils.get_input(msg)
 
