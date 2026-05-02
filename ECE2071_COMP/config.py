@@ -1,7 +1,7 @@
 import serial
 import serial.tools.list_ports
 import sys
-import ECE2071_COMP.init as init
+import utils as utils
 
 # I thought to add a cfg file to handle globl vars if the program expands
 # ignore for now

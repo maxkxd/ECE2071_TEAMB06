@@ -62,17 +62,18 @@ static void MX_TIM16_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-//typedef enum {
-//	TRIGGER,
-//	ECHODURATION,
-//	ECHO
-//} UltrasonicMode;
-volatile static bool echoDuration = false; // change label
+typedef enum {
+	IDLE,
+	STD,
+	USTRG
+} State;
+
+// GPIO rising/falling edge callback -> note: keep this VERY simple
+
+volatile static bool echoDuration = false;
 volatile static bool echoReceived = false;
 volatile static uint32_t echoTime = 1000;
-//volatile static uint32_t echoTime = 0;
-//volatile static uint32_t distance = 100;
-//volatile static bool trigger = false; // change label
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if(HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin) == GPIO_PIN_SET)
@@ -85,6 +86,117 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		echoTime = __HAL_TIM_GET_COUNTER(&htim16);
 		__HAL_TIM_SET_COUNTER(&htim16, 0);
 	}
+}
+
+// uart2 callback -> note: keep this simple
+uint8_t huartBuf[1];
+volatile State state = IDLE;
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huartBuf[0] == 0)
+	{
+		state = IDLE;
+	}
+	else if (huartBuf[0] == 1)
+	{
+		state = STD;
+	}
+	else if (huartBuf[0] == 2)
+	{
+		state = USTRG;
+	}
+
+	HAL_UART_Receive_IT(&huart2, huartBuf, 1);
+}
+
+// std listening
+
+void std_processing()
+{
+	// init for SPI data and UART transmission
+	uint8_t buf [1];
+	uint8_t dataBuf[2];
+	uint8_t mean[1];
+	dataBuf[0] = 0;
+	dataBuf[1] = 0;
+	while (state == STD)
+	{
+		if(HAL_SPI_Receive(&hspi1, buf, 1, 0.2) == HAL_OK)
+		{
+			dataBuf[0] = dataBuf[1];
+			dataBuf[1] = buf[0];
+			mean[0] = (dataBuf[0] + dataBuf[1])/2;
+			HAL_UART_Transmit(&huart2, &mean[0], 1, 0.2);
+		}
+	}
+}
+
+// us listening
+void us_processing()
+{
+	  uint8_t buf [1];
+	  uint8_t dataBuf[2];
+	  uint8_t mean[1];
+	  dataBuf[0] = 0;
+	  dataBuf[1] = 0;
+
+	  // init us sensor
+	  __HAL_TIM_SET_COUNTER(&htim16, 0);
+	  bool trigger = false;
+	  uint32_t distance = 1000;
+	  uint32_t usTimeout = 6e4;
+
+	  // max no detection time -> adjust
+	  uint8_t objCtrMax = 10;
+	  uint8_t objCtr = 0;
+
+	  while (state == USTRG)
+	  {
+		  if(HAL_SPI_Receive(&hspi1, buf, 1, 10) == HAL_OK)
+		  {
+			  dataBuf[0] = dataBuf[1];
+			  dataBuf[1] = buf[0];
+			  mean[0] = (dataBuf[0] + dataBuf[1])/2;
+
+			  if (distance <= 10 && objCtr < objCtrMax)
+			  {
+				  //HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+				  HAL_UART_Transmit(&huart2, &mean[0], 1, 10);
+			  }
+			  if (distance <= 10 && objCtr > objCtrMax)
+			  {
+				  objCtr = 0;
+			  }
+			  else
+			  {
+				  objCtr++;
+			  }
+		  }
+
+		  // sending out request for measurement
+		  if (!trigger && (__HAL_TIM_GET_COUNTER(&htim16) >= usTimeout) && !echoDuration)
+		  {
+			  trigger = true;
+			  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, 1);
+			  __HAL_TIM_SET_COUNTER(&htim16, 0);
+		  }
+
+		  // after 10ms stop request
+		  if(trigger && __HAL_TIM_GET_COUNTER(&htim16) >= 10) {
+			  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, 0);
+			  echoDuration = true;  // set to echoDuration
+			  trigger = false;
+		  }
+
+		  // falling edge isr triggered, find distance and reset
+		  if (echoReceived)
+		  {
+			  echoReceived = false;
+			  echoDuration = false;
+			  distance = echoTime/58.309;
+		  }
+	  }
 }
 
 /* USER CODE END 0 */
@@ -127,73 +239,28 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  // init for SPI data and UART transmission
-  uint8_t buf [1];
-  uint8_t dataBuf[2];
-  uint8_t mean[1];
-  dataBuf[0] = 0;
-  dataBuf[1] = 0;
 
   // init for us sensor
+  HAL_Delay(250); // short pause to stop rail bouncing ig
   HAL_TIM_Base_Start(&htim16);
-  bool trigger = false;
-  uint32_t distance = 1000;
-  uint32_t usTimeout = 6e4;
 
-  // max no detection time
-  uint8_t objCtrMax = 10;
-  uint8_t objCtr = 0;
+  // init uart callback
+  HAL_UART_Receive_IT(&huart2, huartBuf, 1);
 
   while (1)
   {
-//	  HAL_SPI_Receive(&hspi1, buf, 1, 0.02);
-//	  dataBuf[0] = dataBuf[1];
-//	  dataBuf[1] = buf[0];
-//	  mean[0] = (dataBuf[0] + dataBuf[1])/2;
-//	  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
-
-	  if(HAL_SPI_Receive(&hspi1, buf, 1, 10) == HAL_OK)
-	  {
-		  dataBuf[0] = dataBuf[1];
-		  dataBuf[1] = buf[0];
-		  mean[0] = (dataBuf[0] + dataBuf[1])/2;
-
-		  if (distance <= 10 && objCtr < objCtrMax)
-		  {
-			  //HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-			  HAL_UART_Transmit(&huart2, &mean[0], 1, 10);
-		  }
-		  if (distance <= 10 && objCtr > objCtrMax)
-		  {
-			  objCtr = 0;
-		  }
-		  else
-		  {
-			  objCtr++;
-		  }
+	  // standby while idle
+	  while (state == IDLE){
+		  ;//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 	  }
 
-	  // sending out request for measurement
-	  if (!trigger && (__HAL_TIM_GET_COUNTER(&htim16) >= usTimeout) && !echoDuration)
+	  if (state == STD)
 	  {
-		  trigger = true;
-		  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, 1);
-		  __HAL_TIM_SET_COUNTER(&htim16, 0);
+		  std_processing();
 	  }
-
-	  // after 10ms stop request
-	  if(trigger && __HAL_TIM_GET_COUNTER(&htim16) >= 10) {
-		  HAL_GPIO_WritePin(TRIGGER_GPIO_Port, TRIGGER_Pin, 0);
-		  echoDuration = true;  // set to echoDuration
-		  trigger = false;
-	  }
-
-	  // low edge isr triggered, find distance and reset
-	  if (echoReceived)
+	  else if (state == USTRG)
 	  {
-		  echoReceived = false;
-		  echoDuration = false;
-		  distance = echoTime/58.309;
+		  us_processing();
 	  }
 
     /* USER CODE END WHILE */

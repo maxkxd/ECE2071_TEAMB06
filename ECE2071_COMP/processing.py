@@ -55,7 +55,7 @@ def collect_data_us(ser):
         return elapsed, data
 
 def normalise_data(data):
-    data = (data-data.min())/(data.max()-data.min())
+    data = (data)/(data.max())
     data = data*255
     data = data.astype(np.uint8)
 

@@ -46,3 +46,22 @@ def init_port(port):
     except serial.serialutil.SerialException:
         print("Error: Port not found")
         sys.exit()
+
+def transmit_state(ser, state):
+    ser.write(bytes([state]))
+
+def get_input(msg, type = int):
+
+    value = 0
+    invalidInput = True
+
+    while (invalidInput):
+        response = input(f"{msg}")
+
+        try:
+            value = type(response)
+            invalidInput = False
+        except ValueError:
+            print("Invalid input\n")
+
+    return value
