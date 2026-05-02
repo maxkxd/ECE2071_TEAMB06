@@ -18,14 +18,14 @@ def run_test():
     port = utils.find_port()
     ser = utils.init_port(port)
 
-    tests = 10
-    totalTime = 300 #second
+    tests = 5
+    totalTime = 300 #seconds
 
-    totalSamples = np.zeros(tests)
     sampleRates = np.zeros(tests)
-    sampleTimes = np.zeros(tests)
 
+    print("---START---")
     for i in range(tests):
+        print(f"---TEST {i}---")
         utils.transmit_state(ser, 1)
         elapsed, data = proc.collect_data(ser, totalTime)
 
@@ -33,16 +33,21 @@ def run_test():
 
         sampleRate = int(len(data)/elapsed)
 
-        totalSamples[i] = len(data)
         sampleRates[i] = sampleRate
-        sampleTimes[i] = elapsed
 
+        print(f"\tsample rate: {sampleRate}")
+        print(f"\ttotal samples: {len(data)}")
+        print(f"\telapsed: {elapsed:.2f}\n")
+
+    print("---END TESTS---\n\n---RESULTS---")
     # printing out results
     print(f"Mean sample rate: {np.mean(sampleRates)}")
     print(f"Median sample rate: {np.median(sampleRates)}")
     print(f"Sample rate max: {sampleRates.max()}")
     print(f"Sample rate min: {sampleRates.min()}")
     print(f"Sample rate range: {sampleRates.max()-sampleRates.min()}")
+
+    print("---END---")
 
 if __name__=="__main__":
     run_test()
