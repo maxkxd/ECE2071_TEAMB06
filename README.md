@@ -13,62 +13,72 @@ Current stm setup:
 TODO:
         Add options for different save files -> .png, .csv
         Implement Schmitt triggering for us sensor
+        Add outlier rejection algorithm
+        Fine tune outlier rejection and smoothing alg
+        Test us mode
+        test std (and us) mode upon any changes, 300s typical
+
+BUGS:
+        All of them
+        
 
 Current system specs:
         sampling stm prescaler: 31
         Counter period: <22.67 -> set to 22.67 currently
         ADC resolution: ADC 10-bit resolution
 
-        processing downsampling
+        TBC...
+
+std recording conclusion 1: sample rate = 9210sps
 
 Last Test Results - std recording
 
-Params: 5x300s tests in std mode
-specs: 10ksps, baudrate = 115200
-expected: 10ksps
+Params: 5x10s tests in std mode
+specs: 41ksps, baudrate = 115200
+expected: 20.55ksps
+Actual: 21770
+% diff: ~5.9%
 
-Results:
 ---START---
 ---TEST 0---
-        sample rate: 9208
-        total samples: 2762657
+(6531312,)
+        sample rate: 21771
+        total samples: 6531312
         elapsed: 300.00
 
 ---TEST 1---
-        sample rate: 9211
-        total samples: 2763418
+(6531116,)
+        sample rate: 21770
+        total samples: 6531116
         elapsed: 300.00
 
 ---TEST 2---
-        sample rate: 9211
-        total samples: 2763360
+(6531255,)
+        sample rate: 21770
+        total samples: 6531255
         elapsed: 300.00
 
 ---TEST 3---
-        sample rate: 9211
-        total samples: 2763400
+(6531017,)
+        sample rate: 21770
+        total samples: 6531017
         elapsed: 300.00
 
 ---TEST 4---
-        sample rate: 9211
-        total samples: 2763415
+(6531106,)
+        sample rate: 21770
+        total samples: 6531106
         elapsed: 300.00
 
 ---END TESTS---
 
 ---RESULTS---
-Mean sample rate: 9210.4
-Median sample rate: 9211.0
-Sample rate max: 9211.0
-Sample rate min: 9208.0
-Sample rate range: 3.0
+Mean sample rate: 21770.2
+Median sample rate: 21770.0
+Sample rate max: 21771.0
+Sample rate min: 21770.0
+Sample rate range: 1.0
 ---END---
-
-Last Test Results - std recording
-
-Params: 5x300s tests in std mode
-specs: 41ksps, baudrate = 115200
-expected: 20.55ksps
 
 Last test results - us recording
 

@@ -20,13 +20,13 @@ def run_std_test():
     ser = utils.init_port(port)
 
     tests = 5
-    totalTime = 10 #seconds
+    totalTime = 300 #seconds
 
     sampleRates = np.zeros(tests)
 
     print("---START---")
     for i in range(tests):
-        print(f"---TEST {i}---")
+        print(f"---TEST {i+1}---")
         utils.transmit_state(ser, 1)
         elapsed, data = proc.collect_data(ser, totalTime)
 

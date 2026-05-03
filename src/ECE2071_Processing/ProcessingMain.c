@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -119,8 +120,9 @@ void fill_zeros(uint8_t *arr, int len)
 }
 
 // takes in new value and computes the moving average in the buffer
-uint8_t moving_average_filter(uint8_t *arr, uint8_t new, uint8_t len)
+uint8_t smooth(uint8_t *arr, uint8_t new, uint8_t len)
 {
+//	uint8_t threshold = (uint8_t);
 	float sum = 0;
 	for (int i = 0; i < len-1; i++)
 	{
@@ -128,19 +130,31 @@ uint8_t moving_average_filter(uint8_t *arr, uint8_t new, uint8_t len)
 		sum += arr[i];
 	}
 
+//	uint8_t mean = sum/len;
+
+	// very simple outlier rejection algorithm
+	// clamping new value if it greatly exceeds the running mean
+//	if (new > mean + threshold)
+//	{
+//		new = mean + threshold;
+//	}
+//	else if (new < mean - threshold)
+//	{
+//		new = mean - threshold;
+//	}
+
 	arr[len-1] = new;
-	sum+= new;
+	sum += new;
 
 	return sum/len;
 }
 
-void std_processing()
+void std_processing(uint8_t winSize)
 {
 //	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 	// init for SPI data and UART transmission
-	uint8_t winSize = 2;
 	uint16_t buf [2];
-	uint8_t meanBuf[2];
+	uint8_t *meanBuf = (uint8_t *)malloc(winSize*sizeof(uint8_t));
 	uint8_t mean[1];
 
 	fill_zeros(meanBuf, winSize);
@@ -157,7 +171,7 @@ void std_processing()
 		uint8_t sample = (((buf[0] + buf[1])/2)>>2)&0xFF; // 8 msb
 
 		// take moving average
-		mean[0] = moving_average_filter(meanBuf, sample, winSize);
+		mean[0] = smooth(meanBuf, sample, winSize);
 
 		// transmit to computer
 		HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
@@ -165,11 +179,10 @@ void std_processing()
 }
 
 // us listening
-void us_processing()
+void us_processing(uint8_t winSize)
 {
-	uint8_t winSize = 2;
 	uint16_t buf [2];
-	uint8_t meanBuf[2];
+	uint8_t *meanBuf = (uint8_t *)malloc(winSize*sizeof(uint8_t));
 	uint8_t mean[1];
 
 	fill_zeros(meanBuf, winSize);
@@ -195,7 +208,7 @@ void us_processing()
 		  buf[1] = LL_SPI_ReceiveData16(SPI1);
 
 		  uint8_t sample = (((buf[0] + buf[1])/2)>>2)&0xFF; // 8 msb
-		  mean[0] = moving_average_filter(meanBuf, sample, winSize);
+		  mean[0] = smooth(meanBuf, sample, winSize);
 		  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
 
 		  // ADD SCHMITT THING
@@ -289,6 +302,7 @@ int main(void)
   HAL_UART_Receive_IT(&huart2, huartBuf, 1);
 
   // LL_SPI_Enable(SPI1); POTENTIALLY KEEP !!! ADD AFTER MX_SPI1_Init();
+  uint8_t winSize = 2;
 
   while (1)
   {
@@ -299,11 +313,11 @@ int main(void)
 
 	  if (state == STD)
 	  {
-		  std_processing();
+		  std_processing(winSize);
 	  }
 	  else if (state == USTRG)
 	  {
-		  us_processing();
+		  us_processing(winSize);
 	  }
 
     /* USER CODE END WHILE */
@@ -475,7 +489,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 460800;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;

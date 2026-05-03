@@ -37,7 +37,7 @@ def main():
             utils.transmit_state(ser, idle)
             
             # hardcoded -> write to .wav file
-            proc.write_to_wav(data, 9210)
+            proc.write_to_wav(data, 21770)
 
         elif mode == 1:
 
