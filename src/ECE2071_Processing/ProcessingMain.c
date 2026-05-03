@@ -160,7 +160,7 @@ void std_processing(uint8_t winSize)
 	fill_zeros(meanBuf, winSize);
 
   // init for rejection algorithm
-  uint8_t n = 0; // no. of points
+  uint32_t n = 0; // no. of points
   uint8_t avrg = 0; // average/mean of data
   uint8_t tdist; // tunable distance
 	while (state == STD)
@@ -213,7 +213,7 @@ void us_processing(uint8_t winSize)
 	  uint8_t objCtr = 0;
 
     // init for rejection algorithm
-    uint8_t n = 0; // no. of points
+    uint32_t n = 0; // no. of points
     uint8_t avrg = 0; // average/mean of data
     uint8_t tdist; // tunable distance
 	  while (state == USTRG)
@@ -228,7 +228,7 @@ void us_processing(uint8_t winSize)
 
 		  uint8_t sample = (((buf[0] + buf[1])/2)>>2)&0xFF; // 8 msb
 		  mean[0] = smooth(meanBuf, sample, winSize);
-      
+
       // rejection algorithm
       n = n + 2; // increment no. of points
       avrg  = ((n-2)*avrg + buf[0] + buf[1])/n; // continuosly modify average
