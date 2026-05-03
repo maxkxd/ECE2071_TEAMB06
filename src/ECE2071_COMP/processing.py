@@ -31,30 +31,22 @@ def collect_data(ser, recordTime):
 def collect_data_us(ser):
     start = time.time()
     samples = []
-    elapsedOffset = 0
 
     # collecting data
     try:
-        #samplingStopped = False;
-        #pauseTimeStart = 0
         while True:
             sample = list(ser.read(1))
             if sample:
                 samples.append(sample)
-                if samplingStopped:
-                   elapsedOffset += time.time() - pauseTimeStart
-                   samplingStopped = False
             else:
-                if not samplingStopped:
-                   pauseTimeStart = time.time()
-                   samplingStopped= True
+                print("stop")
+
     except KeyboardInterrupt:
-        elapsed = time.time() - start# - elapsedOffset
         # reshaping to 1xN array
         data = np.array(samples)
         data = data.reshape(-1)
         
-        return elapsed, data
+        return data
 
 def normalise_data(data):
     data = (data-data.min())/(data.max()-data.min())

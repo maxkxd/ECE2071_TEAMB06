@@ -42,3 +42,24 @@ def help_US():
     help = utils.get_input()
 
     return help
+
+def help_proc(help):
+    #help loop
+    while True:
+        #help standard mode
+        if help == 0:
+            help = help_standard()
+            if help == 0:
+                continue
+            elif help == 1:
+                break
+        #help US triggered mode
+        elif help == 1:
+            help = help_US()
+            if help == 0:
+                continue
+            elif help == 1:
+                break
+        #return to mode select
+        elif help == 2:
+            break
