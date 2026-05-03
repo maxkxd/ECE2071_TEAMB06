@@ -158,6 +158,11 @@ void std_processing(uint8_t winSize)
 	uint8_t mean[1];
 
 	fill_zeros(meanBuf, winSize);
+
+  // init for rejection algorithm
+  uint8_t n = 0; // no. of points
+  uint8_t avrg = 0; // average/mean of data
+  uint8_t tdist; // tunable distance
 	while (state == STD)
 	{
 		// kinda sketch, but it takes in two samples and downsamples through sample averaging
@@ -172,6 +177,16 @@ void std_processing(uint8_t winSize)
 
 		// take moving average
 		mean[0] = smooth(meanBuf, sample, winSize);
+
+    // rejection algorithm
+    n = n + 2; // increment no. of points
+    avrg  = ((n-2)*avrg + buf[0] + buf[1])/n; // continuosly modify average
+    tdist = avrg/3; // <-- modify this value while testing to find a good threshold
+
+    // if datapoint is greater/less than avrg +- tunable distance, continue to skip transmission 
+    if (mean[0] > avrg + tdist || mean[0] < avrg - tdist) {
+      continue;
+    }
 
 		// transmit to computer
 		HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
@@ -197,6 +212,10 @@ void us_processing(uint8_t winSize)
 	  uint8_t objCtrMax = 100;
 	  uint8_t objCtr = 0;
 
+    // init for rejection algorithm
+    uint8_t n = 0; // no. of points
+    uint8_t avrg = 0; // average/mean of data
+    uint8_t tdist; // tunable distance
 	  while (state == USTRG)
 	  {
 		  // kinda sketch, but it takes in two samples and downsamples through sample averaging
@@ -209,6 +228,17 @@ void us_processing(uint8_t winSize)
 
 		  uint8_t sample = (((buf[0] + buf[1])/2)>>2)&0xFF; // 8 msb
 		  mean[0] = smooth(meanBuf, sample, winSize);
+      
+      // rejection algorithm
+      n = n + 2; // increment no. of points
+      avrg  = ((n-2)*avrg + buf[0] + buf[1])/n; // continuosly modify average
+      tdist = avrg/3; // <-- modify this value while testing to find a good threshold
+
+      // if datapoint is greater/less than avrg +- tunable distance, continue to skip transmission 
+      if (mean[0] > avrg + tdist || mean[0] < avrg - tdist) {
+        continue;
+      }
+
 		  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
 
 		  // ADD SCHMITT THING
