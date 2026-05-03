@@ -20,7 +20,7 @@ def run_std_test():
     ser = utils.init_port(port)
 
     tests = 5
-    totalTime = 300 #seconds
+    totalTime = 10 #seconds
 
     sampleRates = np.zeros(tests)
 
@@ -74,4 +74,4 @@ def run_us_test():
 
 
 if __name__=="__main__":
-    run_us_test()
+    run_std_test()

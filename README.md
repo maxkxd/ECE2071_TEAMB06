@@ -12,10 +12,20 @@ Current stm setup:
 
 TODO:
         Add options for different save files -> .png, .csv
+        Implement Schmitt triggering for us sensor
+
+Current system specs:
+        sampling stm prescaler: 31
+        Counter period: <22.67 -> set to 22.67 currently
+        ADC resolution: ADC 10-bit resolution
+
+        processing downsampling
 
 Last Test Results - std recording
 
 Params: 5x300s tests in std mode
+specs: 10ksps, baudrate = 115200
+expected: 10ksps
 
 Results:
 ---START---
@@ -53,6 +63,12 @@ Sample rate max: 9211.0
 Sample rate min: 9208.0
 Sample rate range: 3.0
 ---END---
+
+Last Test Results - std recording
+
+Params: 5x300s tests in std mode
+specs: 41ksps, baudrate = 115200
+expected: 20.55ksps
 
 Last test results - us recording
 

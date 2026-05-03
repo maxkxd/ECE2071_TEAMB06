@@ -40,7 +40,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim16;
 
@@ -110,36 +109,70 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(&huart2, huartBuf, 1);
 }
 
-// std listening
+// fill an array with zeros as necessary
+void fill_zeros(uint8_t *arr, int len)
+{
+	for (int i = 0; i < len; i++)
+	{
+		arr[i] = 0;
+	}
+}
+
+// takes in new value and computes the moving average in the buffer
+uint8_t moving_average_filter(uint8_t *arr, uint8_t new, uint8_t len)
+{
+	float sum = 0;
+	for (int i = 0; i < len-1; i++)
+	{
+		arr[i] = arr[i+1];
+		sum += arr[i];
+	}
+
+	arr[len-1] = new;
+	sum+= new;
+
+	return sum/len;
+}
 
 void std_processing()
 {
+//	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 	// init for SPI data and UART transmission
-	uint8_t buf [1];
-	uint8_t dataBuf[2];
+	uint8_t winSize = 2;
+	uint16_t buf [2];
+	uint8_t meanBuf[2];
 	uint8_t mean[1];
-	dataBuf[0] = 0;
-	dataBuf[1] = 0;
+
+	fill_zeros(meanBuf, winSize);
 	while (state == STD)
 	{
-		if(HAL_SPI_Receive(&hspi1, buf, 1, 0.2) == HAL_OK)
-		{
-			dataBuf[0] = dataBuf[1];
-			dataBuf[1] = buf[0];
-			mean[0] = (dataBuf[0] + dataBuf[1])/2;
-			HAL_UART_Transmit(&huart2, &mean[0], 1, 0.2);
-		}
+		// kinda sketch, but it takes in two samples and downsamples through sample averaging
+		// someone check this and improve it
+		while (!LL_SPI_IsActiveFlag_RXNE(SPI1)){;}// wait for data
+		buf[0] = LL_SPI_ReceiveData16(SPI1);
+		// second pass for sample averaging
+		while (!LL_SPI_IsActiveFlag_RXNE(SPI1)){;}// wait for data
+		buf[1] = LL_SPI_ReceiveData16(SPI1);
+		// take sample average -> 44.1ksps to 20.5 ksps
+		uint8_t sample = (((buf[0] + buf[1])/2)>>2)&0xFF; // 8 msb
+
+		// take moving average
+		mean[0] = moving_average_filter(meanBuf, sample, winSize);
+
+		// transmit to computer
+		HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
 	}
 }
 
 // us listening
 void us_processing()
 {
-	  uint8_t buf [1];
-	  uint8_t dataBuf[2];
-	  uint8_t mean[1];
-	  dataBuf[0] = 0;
-	  dataBuf[1] = 0;
+	uint8_t winSize = 2;
+	uint16_t buf [2];
+	uint8_t meanBuf[2];
+	uint8_t mean[1];
+
+	fill_zeros(meanBuf, winSize);
 
 	  // init us sensor
 	  __HAL_TIM_SET_COUNTER(&htim16, 0);
@@ -148,30 +181,35 @@ void us_processing()
 	  uint32_t usTimeout = 6e4;
 
 	  // max no detection time -> adjust
-	  uint8_t objCtrMax = 10;
+	  uint8_t objCtrMax = 100;
 	  uint8_t objCtr = 0;
 
 	  while (state == USTRG)
 	  {
-		  if(HAL_SPI_Receive(&hspi1, buf, 1, 10) == HAL_OK)
-		  {
-			  dataBuf[0] = dataBuf[1];
-			  dataBuf[1] = buf[0];
-			  mean[0] = (dataBuf[0] + dataBuf[1])/2;
+		  // kinda sketch, but it takes in two samples and downsamples through sample averaging
+		  // someone check this and improve it
+		  while (!LL_SPI_IsActiveFlag_RXNE(SPI1)){;}// wait for data
+		  buf[0] = LL_SPI_ReceiveData16(SPI1);
+		  // second pass for sample averaging
+		  while (!LL_SPI_IsActiveFlag_RXNE(SPI1)){;}// wait for data
+		  buf[1] = LL_SPI_ReceiveData16(SPI1);
 
-			  if (distance <= 10 && objCtr < objCtrMax)
-			  {
-				  //HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-				  HAL_UART_Transmit(&huart2, &mean[0], 1, 10);
-			  }
-			  if (distance <= 10 && objCtr > objCtrMax)
-			  {
-				  objCtr = 0;
-			  }
-			  else
-			  {
-				  objCtr++;
-			  }
+		  uint8_t sample = (((buf[0] + buf[1])/2)>>2)&0xFF; // 8 msb
+		  mean[0] = moving_average_filter(meanBuf, sample, winSize);
+		  HAL_UART_Transmit(&huart2, &mean[0], 1, HAL_MAX_DELAY);
+
+		  // ADD SCHMITT THING
+		  if (distance <= 10 && objCtr < objCtrMax)
+		  {
+			  HAL_UART_Transmit(&huart2, &mean[0], 1, 10);
+		  }
+		  else if (distance <= 10 && objCtr >= objCtrMax)
+		  {
+			  objCtr = 0;
+		  }
+		  else
+		  {
+			  objCtr++;
 		  }
 
 		  // sending out request for measurement
@@ -197,6 +235,8 @@ void us_processing()
 			  distance = echoTime/58.309;
 		  }
 	  }
+
+	  //HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 }
 
 /* USER CODE END 0 */
@@ -241,11 +281,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   // init for us sensor
+  LL_SPI_Enable(SPI1); // chatgpt!!
   HAL_Delay(250); // short pause to stop rail bouncing ig
   HAL_TIM_Base_Start(&htim16);
 
   // init uart callback
   HAL_UART_Receive_IT(&huart2, huartBuf, 1);
+
+  // LL_SPI_Enable(SPI1); POTENTIALLY KEEP !!! ADD AFTER MX_SPI1_Init();
 
   while (1)
   {
@@ -342,27 +385,42 @@ static void MX_SPI1_Init(void)
 
   /* USER CODE END SPI1_Init 0 */
 
+  LL_SPI_InitTypeDef SPI_InitStruct = {0};
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* Peripheral clock enable */
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
+
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
+  /**SPI1 GPIO Configuration
+  PA1   ------> SPI1_SCK
+  PA7   ------> SPI1_MOSI
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_1|LL_GPIO_PIN_7;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /* USER CODE BEGIN SPI1_Init 1 */
 
   /* USER CODE END SPI1_Init 1 */
   /* SPI1 parameter configuration*/
-  hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_SLAVE;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 7;
-  hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  SPI_InitStruct.TransferDirection = LL_SPI_SIMPLEX_RX;
+  SPI_InitStruct.Mode = LL_SPI_MODE_SLAVE;
+  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;
+  SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
+  SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
+  SPI_InitStruct.NSS = LL_SPI_NSS_SOFT;
+  SPI_InitStruct.BitOrder = LL_SPI_MSB_FIRST;
+  SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+  SPI_InitStruct.CRCPoly = 7;
+  LL_SPI_Init(SPI1, &SPI_InitStruct);
+  LL_SPI_SetStandard(SPI1, LL_SPI_PROTOCOL_MOTOROLA);
+  LL_SPI_DisableNSSPulseMgt(SPI1);
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */

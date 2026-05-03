@@ -64,20 +64,29 @@ static void MX_SPI1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static void SPI1_WriteByte(uint8_t tx_byte)
+static void SPI1_WriteTwoBytes(uint16_t tx_data)
 {
 	while (!LL_SPI_IsActiveFlag_TXE(SPI1)) {;}
-	LL_SPI_TransmitData8(SPI1, tx_byte);
-	while(LL_SPI_IsActiveFlag_BSY(SPI1)){;}
+	LL_SPI_TransmitData16(SPI1, tx_data);
+	while (LL_SPI_IsActiveFlag_BSY(SPI1)) {;}
 	LL_SPI_ClearFlag_OVR(SPI1);
 }
 
+// ignore
+//static void SPI1_WriteByte(uint8_t tx_byte)
+//{
+//	while (!LL_SPI_IsActiveFlag_TXE(SPI1)) {;}
+//	LL_SPI_TransmitData8(SPI1, tx_byte);
+//	while(LL_SPI_IsActiveFlag_BSY(SPI1)){;}
+//	LL_SPI_ClearFlag_OVR(SPI1);
+//}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	static uint8_t sampledValue[1];
+	static uint16_t sampledValue[1];
 
 	sampledValue[0] = HAL_ADC_GetValue(&hadc1);
-	SPI1_WriteByte(sampledValue[0]);
+	SPI1_WriteTwoBytes(sampledValue[0]);
 }
 /* USER CODE END 0 */
 
@@ -123,62 +132,10 @@ int main(void)
   //uint8_t sampledValue;
   //uint8_t buf[1];
   HAL_TIM_Base_Start(&htim1);
-   uint32_t echoCounter;
-   uint8_t trig_finish = 0;
-   GPIO_PinState echoState = 0;
-   int distance;
   HAL_ADC_Start_IT(&hadc1);
   LL_SPI_Enable(SPI1);
   while (1)
   {
-	  HAL_GPIO_WritePin(
-					TRIGGER_GPIO_Port,
-					TRIGGER_Pin,
-					1);
-
-	  if(__HAL_TIM_GET_COUNTER(&htim16) >= 10) {
-		  HAL_GPIO_WritePin(
-			TRIGGER_GPIO_Port,
-			TRIGGER_Pin,
-			0
-		  );
-		  trig_finish = 1;
-	  }
-	  if (trig_finish) {
-		  while (!echoState) {
-		  echoState = HAL_GPIO_ReadPin(
-			ECHO_GPIO_Port,
-			ECHO_Pin
-		  );
-		  }
-	  __HAL_TIM_SET_COUNTER(&htim16, 0);
-	  while (echoState) {
-		  echoState = HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin);
-	  }
-
-	  echoCounter = __HAL_TIM_GET_COUNTER(&htim16);
-
-	  distance = echoCounter/58.309;
-
-		  if(distance<10) {
-			  HAL_GPIO_WritePin(
-				LD3_GPIO_Port,
-				LD3_Pin,
-				1
-			  );
-		  }
-		  else {
-			  HAL_GPIO_WritePin(
-				LD3_GPIO_Port,
-				LD3_Pin,
-				0
-			  );
-		  }
-		  trig_finish = 0;
-		__HAL_TIM_SET_COUNTER(&htim16, 0);
-		
-		while (&htim16 <= 60){;}
-}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -268,7 +225,7 @@ static void MX_ADC1_Init(void)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
-  hadc1.Init.Resolution = ADC_RESOLUTION_8B;
+  hadc1.Init.Resolution = ADC_RESOLUTION_10B;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
@@ -342,7 +299,7 @@ static void MX_SPI1_Init(void)
   /* SPI1 parameter configuration*/
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_4BIT;
+  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;
   SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
   SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
   SPI_InitStruct.NSS = LL_SPI_NSS_SOFT;
@@ -380,7 +337,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 31;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 120;
+  htim1.Init.Period = 22;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
