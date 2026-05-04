@@ -50,6 +50,7 @@ def help_proc(help):
         if help == 0:
             help = help_standard()
             if help == 0:
+                help = help_window()
                 continue
             elif help == 1:
                 break
@@ -57,6 +58,7 @@ def help_proc(help):
         elif help == 1:
             help = help_US()
             if help == 0:
+                help = help_window()
                 continue
             elif help == 1:
                 break
