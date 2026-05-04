@@ -84,7 +84,6 @@ static void SPI1_WriteTwoBytes(uint16_t tx_data)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
 	static uint16_t sampledValue[1];
-
 	sampledValue[0] = HAL_ADC_GetValue(&hadc1);
 	SPI1_WriteTwoBytes(sampledValue[0]);
 }
