@@ -66,11 +66,11 @@ def main():
 
             # write to certain data type
             if outputType == 0:
-                proc.write_to_wav(data, 21770)
+                proc.write_to_wav(data, 9140)
             elif outputType == 1:
-                proc.write_to_csv(data, 21770)
+                proc.write_to_csv(data, 9140)
             elif outputType == 2:
-                proc.write_to_png(data, 21770)
+                proc.write_to_png(data, 9140)
             elif outputType == 3:
                 continue
         
