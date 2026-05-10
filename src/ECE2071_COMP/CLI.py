@@ -1,67 +1,78 @@
 import utils as utils
 
 # This file handles all CLI interactions
+
 def fetch_record_time():
-    msg = "How long to record for?\n> "
+    msg = "How long to record for (seconds)?\n> "
+    return utils.get_input(msg, float)
 
-    time = utils.get_input(msg, float)
 
-    return time
+def fetch_output_formats():
+    """Ask user which output formats they want. Returns a set of format strings."""
+    print("\nSelect output format(s):")
+    print("  1: WAV  (audio playback)")
+    print("  2: PNG  (waveform plot)")
+    print("  3: CSV  (raw data)")
+    print("  4: FFT  (spectrum plot)")
+    print("Enter numbers separated by spaces (e.g. '1 2'):")
+    choices = input("> ").split()
+    mapping = {'1': 'wav', '2': 'png', '3': 'csv', '4': 'fft'}
+    selected = {mapping[c] for c in choices if c in mapping}
+    if not selected:
+        print("No valid selection — defaulting to WAV.")
+        selected = {'wav'}
+    return selected
 
-def fetch_output():
-    output = input("How would you like to save the recording?\n> ")
-
-    print("saving...")
-
-    return output
 
 def fetch_mode():
-    msg = "How would you like to record?\n0: Standard\n1: US triggered\n2: Exit\n3: Help\n> "
+    msg = (
+        "\n=== Mode Select ===\n"
+        "0: Manual Recording Mode\n"
+        "1: Distance Trigger Mode\n"
+        "2: Exit\n"
+        "3: Help\n"
+        "> "
+    )
+    return utils.get_input(msg)
 
-    mode = utils.get_input(msg)
-
-    return mode
 
 def help_window():
-    msg = "Which mode do you want help with?\n0: Standard\n1: US triggered\n2: Exit help\n>"
+    msg = "Which mode do you want help with?\n0: Manual Recording\n1: Distance Trigger\n2: Exit help\n> "
+    return utils.get_input(msg)
 
-    help = utils.get_input(msg)
-
-    return help
 
 def help_standard():
-    msg = "The standard mode will ask you to specify how long you would like to record for\n0:Back to help\n1:Back to mode select\n>"
+    msg = (
+        "Manual Recording Mode: enter a duration in seconds.\n"
+        "The system records for that long, then saves your chosen formats.\n"
+        "0: Back to help\n1: Back to mode select\n> "
+    )
+    return utils.get_input(msg)
 
-    help = utils.get_input(msg)
-
-    return help
 
 def help_US():
-    msg = "The US triggered mode will record as long as the ultrasonic sensor detects something within 10cm\n0:Back to help\n1:Back to mode select\n>"
+    msg = (
+        "Distance Trigger Mode: recording starts automatically when an object\n"
+        "is detected within 10 cm and stops ~50 ms after it moves away.\n"
+        "Press Ctrl-C to exit the mode early.\n"
+        "0: Back to help\n1: Back to mode select\n> "
+    )
+    return utils.get_input(msg)
 
-    help = utils.get_input()
-
-    return help
 
 def help_proc(help):
-    #help loop
     while True:
-        #help standard mode
         if help == 0:
             help = help_standard()
             if help == 0:
                 help = help_window()
-                continue
             elif help == 1:
                 break
-        #help US triggered mode
         elif help == 1:
             help = help_US()
             if help == 0:
                 help = help_window()
-                continue
             elif help == 1:
                 break
-        #return to mode select
         elif help == 2:
             break

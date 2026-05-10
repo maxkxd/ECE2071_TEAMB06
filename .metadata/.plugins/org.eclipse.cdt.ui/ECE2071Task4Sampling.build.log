@@ -1,0 +1,10 @@
+20:34:33 **** Incremental Build of configuration Debug for project ECE2071Task4Sampling ****
+make -j12 all 
+arm-none-eabi-size  ECE2071Task4Sampling.elf 
+   text	   data	    bss	    dec	    hex	filename
+  22436	     12	   1956	  24404	   5f54	ECE2071Task4Sampling.elf
+Finished building: default.size.stdout
+ 
+
+20:34:33 Build Finished. 0 errors, 0 warnings. (took 76ms)
+

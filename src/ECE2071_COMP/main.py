@@ -1,72 +1,50 @@
-import numpy as np
 import sys
-import utils as utils
-import CLI as CLI
+import utils
+import CLI
 import processing as proc
-import config
+
+IDLE = 0
+STD  = 1
+USTRG = 2
 
 def main():
-
-    #initialising stm
     port = utils.find_port()
-    ser = utils.init_port(port)
+    ser  = utils.init_port(port)
 
-
-    #initialising states
-    exitProgram = False
-    idle = 0
-
-    # start main loop
-    while not exitProgram:
-
+    while True:
         mode = CLI.fetch_mode()
 
-        # std recording
         if mode == 0:
-            # switch stm to std recording mode
-            utils.transmit_state(ser, mode+1)
+            # Manual Recording Mode
+            utils.transmit_state(ser, STD)
+            record_time = CLI.fetch_record_time()
+            output_flags = CLI.fetch_output_formats()
 
-            # sampling routine
-            recordTime = CLI.fetch_record_time()
-            elapsedTime, samples = proc.collect_data(ser, recordTime)
-            data = np.array(samples)
-            data = proc.normalise_data(data)
-            #sampleRate = int(len(data)/elapsedTime)
+            raw = proc.collect_data(ser, record_time)
+            utils.transmit_state(ser, IDLE)
 
-            # set stm back to default state
-            utils.transmit_state(ser, idle)
-            
-            # hardcoded -> write to .wav file
-            proc.write_to_wav(data, 21770)
+            data = proc.normalise_data(raw)
+            proc.save_outputs(data, output_flags)
 
         elif mode == 1:
+            # Distance Trigger Mode
+            utils.transmit_state(ser, USTRG)
+            output_flags = CLI.fetch_output_formats()
 
-            utils.transmit_state(ser, mode+1)
+            raw = proc.collect_data_us(ser)
+            utils.transmit_state(ser, IDLE)
 
-            #collect data
-            samples = proc.collect_data_us(ser)
+            data = proc.normalise_data(raw)
+            proc.save_outputs(data, output_flags)
 
-            # set stm back to default state
-            utils.transmit_state(ser, idle)
-
-            # convert to np array
-            data = np.array(samples)
-
-            data = proc.normalise_data(data)
-            #sampleRate = int(len(data)/elapsedTime)
-
-            # hardcoded -> write to .wav file
-            proc.write_to_wav(data, 9140)
-        
         elif mode == 2:
-            exitProgram = True
-            print("exiting")
+            print("Exiting.")
             ser.close()
+            break
 
         elif mode == 3:
-
-            help = CLI.help_window()
-            CLI.help_proc(help)
+            help_sel = CLI.help_window()
+            CLI.help_proc(help_sel)
 
 
 if __name__ == "__main__":

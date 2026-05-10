@@ -22,6 +22,7 @@ def find_port():
     sys.exit()
 
 
+import config
 # connecting ports
 def init_port(port):
     """Initialises the port for serial communication
@@ -36,8 +37,8 @@ def init_port(port):
     try:
         ser = serial.Serial(
             port,
-            460800,
-            timeout=2
+            config.Config.baudrate,
+            timeout=0.1   # short timeout so collect_data can check elapsed time regularly
         )
         print("Port connected...")
         #time.sleep(3)
