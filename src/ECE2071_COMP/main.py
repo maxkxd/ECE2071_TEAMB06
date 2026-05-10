@@ -20,6 +20,7 @@ def main():
     while not exitProgram:
 
         mode = CLI.fetch_mode()
+        outputType = CLI.fetch_output()
 
         # std recording
         if mode == 0:
@@ -36,8 +37,16 @@ def main():
             # set stm back to default state
             utils.transmit_state(ser, idle)
             
-            # hardcoded -> write to .wav file
-            proc.write_to_wav(data, 21770)
+            # write to certain data type
+            if outputType == 0:
+                proc.write_to_wav(data, 21770)
+            elif outputType == 1:
+                proc.write_to_csv(data, 21770)
+            elif outputType == 2:
+                proc.write_to_png(data, 21770)
+            elif outputType == 3:
+                continue
+                
 
         elif mode == 1:
 
@@ -55,8 +64,15 @@ def main():
             data = proc.normalise_data(data)
             #sampleRate = int(len(data)/elapsedTime)
 
-            # hardcoded -> write to .wav file
-            proc.write_to_wav(data, 9140)
+            # write to certain data type
+            if outputType == 0:
+                proc.write_to_wav(data, 21770)
+            elif outputType == 1:
+                proc.write_to_csv(data, 21770)
+            elif outputType == 2:
+                proc.write_to_png(data, 21770)
+            elif outputType == 3:
+                continue
         
         elif mode == 2:
             exitProgram = True

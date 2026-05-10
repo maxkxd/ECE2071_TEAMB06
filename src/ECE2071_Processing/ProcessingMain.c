@@ -163,6 +163,7 @@ void std_processing(uint8_t winSize)
   uint32_t n = 0; // no. of points
   uint8_t avrg = 0; // average/mean of data
   uint8_t tdist; // tunable distance
+  uint8_t movingMeanCount = 0; // moving mean count 
 	while (state == STD)
 	{
 		// kinda sketch, but it takes in two samples and downsamples through sample averaging
@@ -179,9 +180,15 @@ void std_processing(uint8_t winSize)
 		mean[0] = smooth(meanBuf, sample, winSize);
 
     // rejection algorithm
+    if (movingMeanCount == 4) {
+      avrg = 0;
+      n = 0;
+      movingMeanCount = 0;
+    }
     n = n + 2; // increment no. of points
     avrg  = ((n-2)*avrg + buf[0] + buf[1])/n; // continuosly modify average
     tdist = avrg/3; // <-- modify this value while testing to find a good threshold
+    movingMeanCount++;
 
     // if datapoint is greater/less than avrg +- tunable distance, continue to skip transmission 
     if (mean[0] > avrg + tdist || mean[0] < avrg - tdist) {

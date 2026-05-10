@@ -4,6 +4,8 @@ import serial.tools.list_ports
 import sys
 import time
 import wave
+import pandas as pd
+import matplotlib.pyplot as plt
 # split file up in the future gng >:)
 
 def collect_data(ser, recordTime):
@@ -61,3 +63,21 @@ def write_to_wav(data, sampleRate):
         wf.setsampwidth(1)
         wf.setframerate(sampleRate)
         wf.writeframes(data.tobytes())
+
+def write_to_csv(data, sampleRate):
+    data_array = np.frombuffer(data, dtype=np.uint8)
+    data_frame = pd.DataFrame(data_array, columns=[f'Data - Sample Rate: {sampleRate}'])
+    data_frame.to_csv('output.csv', index=False)
+
+def write_to_png(data, sampleRate):
+    data_array = np.frombuffer(data, dtype=np.uint8)
+    num_samples = len(data_array)
+    time_array = np.linspace(0, num_samples/sampleRate, num_samples)
+    
+    plt.figure()
+    plt.plot(time_array, data_array)
+    plt.xlabel("Time")
+    plt.ylabel("Amplitude")
+    plt.title("Plot of ADC Voltage Samples over Time")
+    plt.savefig('output.png')
+    plt.close()
