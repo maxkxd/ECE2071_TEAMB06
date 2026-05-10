@@ -37,17 +37,17 @@ def collect_data_us(ser):
     # collecting data
     try:
         while True:
-            sample = list(ser.read(1))
+            sample = ser.read(1)
             if sample:
-                samples.append(sample)
+                samples.append(sample[0])
             else:
                 print("stop")
 
     except KeyboardInterrupt:
         # reshaping to 1xN array
+        elapsedTime = time.time() - start
         data = np.array(samples)
-        data = data.reshape(-1)
-        return data
+        return elapsedTime, data
 
 def normalise_data(data):
     data = (data-data.min())/(data.max()-data.min())
