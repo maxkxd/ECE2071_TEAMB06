@@ -32,18 +32,20 @@ def main():
             elapsedTime, samples = proc.collect_data(ser, recordTime)
             data = np.array(samples)
             data = proc.normalise_data(data)
-            #sampleRate = int(len(data)/elapsedTime)
+            sampleRate = int(len(data)/elapsedTime)
+            print(f"sample rate: {sampleRate}")
+            print(f"samples: {len(data)}")
 
             # set stm back to default state
             utils.transmit_state(ser, idle)
             
             # write to certain data type
             if outputType == 0:
-                proc.write_to_wav(data, 21770)
+                proc.write_to_wav(data, sampleRate)
             elif outputType == 1:
-                proc.write_to_csv(data, 21770)
+                proc.write_to_csv(data, sampleRate)
             elif outputType == 2:
-                proc.write_to_png(data, 21770)
+                proc.write_to_png(data, sampleRate)
             elif outputType == 3:
                 continue
                 
@@ -63,7 +65,7 @@ def main():
 
             data = proc.normalise_data(data)
             #sampleRate = int(len(data)/elapsedTime)
-
+        
             # write to certain data type
             if outputType == 0:
                 proc.write_to_wav(data, 9140)

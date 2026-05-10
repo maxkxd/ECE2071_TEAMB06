@@ -9,9 +9,9 @@ def fetch_record_time():
     return time
 
 def fetch_output():
-    output = input("How would you like to save the recording?\n0: .wav\n1: .csv\n2: .png\n 3: Back to Mode\n> ")
+    msg = "How would you like to save the recording?\n0: .wav\n1: .csv\n2: .png\n 3: Back to Mode\n> "
 
-    outputType = utils.get_input(output) 
+    outputType = utils.get_input(msg) 
 
     print("saving...")
 

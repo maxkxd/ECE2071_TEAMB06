@@ -47,7 +47,6 @@ def collect_data_us(ser):
         # reshaping to 1xN array
         data = np.array(samples)
         data = data.reshape(-1)
-        
         return data
 
 def normalise_data(data):
